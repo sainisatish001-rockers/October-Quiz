@@ -179,43 +179,36 @@
     let selectedAnswersLog = [];
 
         // Blocks re-running for regular players but EXEMPTS admin Sateesha (255769)
+       // 1. Cleaned onload function: Allows anyone to type on the main screen
     window.onload = function() {
-        // Checks if the device was used, but skips verification if it's the admin
-        if(localStorage.getItem('msil_quiz_submitted') === 'true') {
-            // A temporary input check on load to see if the current device user is Sateesha
-            let checkAdminId = prompt("Device Locked. If you are the Admin, enter Token ID to unlock:\n(अन्यथा इसे खाली छोड़ दें / Leave blank if participant)");
-            
-            if (checkAdminId && checkAdminId.trim() === "255769") {
-                alert("Welcome back Sateesha! Admin bypass active. You can run the quiz again.");
-                localStorage.removeItem('msil_quiz_submitted'); // Temporarily unlocks for this session
-                location.reload();
-                return;
-            }
-
-            document.getElementById('start-screen').innerHTML = `
-                <h2 style="color:#e53e3e;">⚠️ Test Submission Locked / ब्लॉक</h2>
-                <p style="font-weight:500;">You have already submitted your response for this session.<br>क्विज़ पहले ही पूरा हो चुका है। दोबारा प्रयास करने की अनुमति नहीं है।</p>
-                <button class="btn-start" style="background:#718096 !important;" onclick="showMasterDashboard()">View Standings / परिणाम देखें</button>
-            `;
-        }
         let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
         if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
             handleRenderTable(currentList, 'end-leaderboard-container');
         }
     }
 
+    // 2. Strict validation matching database logs right at this stage
     function validateAndStart() {
         userName = document.getElementById('player-name').value.trim();
         userEmpId = document.getElementById('player-id').value.trim();
+        
         if(!userName || !userEmpId){
-            alert("Please enter Name and Employee ID!");
+            alert("कृपया नाम और टोकन नंबर दोनों भरें! / Please enter both Name and Employee ID!");
             return;
         }
 
+        // Admin Bypass Rule: Sateesha (255769) is always allowed to re-run
+        if (userName === "Sateesha" && userEmpId === "255769") {
+            startQuiz();
+            return;
+        }
+
+        // Cross-match check against historical database log arrays
         let history = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
-        let identityExists = history.some(item => item.empId.toLowerCase() === userEmpId.toLowerCase());
+        let identityExists = history.some(item => item.empId.trim().toLowerCase() === userEmpId.toLowerCase());
+        
         if(identityExists) {
-            alert("This Employee Token ID has already taken the quiz! Access Denied.");
+            alert("🛑 Access Denied! This Employee Token ID has already taken the quiz.\nइस टोकन नंबर से क्विज़ पहले ही दिया जा चुका है! दोबारा प्रयास करने की अनुमति नहीं है।");
             return;
         }
 
