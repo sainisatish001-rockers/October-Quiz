@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ MSIL Speed Quiz & Live Dashboard ⚡</title>
+    <title>⚡ MSIL Speed Quiz & Live Local Dashboard ⚡</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -121,7 +121,7 @@
     <div id="end-screen" class="hidden">
         <div id="result-message"></div>
         
-        <!-- Live Leaderboard Container inside End Screen -->
+        <!-- Local Leaderboard Container inside End Screen -->
         <div class="master-panel">
             <div class="master-title">📊 Live Leaderboard (Winner on Top)</div>
             <div id="end-leaderboard-container">Loading scores...</div>
@@ -130,20 +130,18 @@
         <button class="btn-start" style="background: #4299e1 !important; margin-top:20px;" onclick="location.reload()">Try Again / दोबारा प्रयास करें</button>
     </div>
 
-    <!-- Separate Master Admin Monitor Panel -->
+    <!-- Master Monitor Panel -->
     <div id="master-dashboard-screen" class="hidden">
         <div class="master-panel">
             <div class="master-title">🏆 MSIL LIVE MASTER DASHBOARD 🏆</div>
-            <div id="master-table-container">Loading dynamic live table...</div>
+            <div id="master-table-container">Loading table...</div>
         </div>
-        <button class="btn-start" style="background: #718096 !important; margin-top:20px;" onclick="location.reload()">Back to Quiz Start</button>
+        <button class="btn-start" style="background: #e53e3e !important; margin-top:10px;" onclick="clearLeaderboard()">🗑️ Clear All Scores / डेटा डिलीट करें</button>
+        <button class="btn-start" style="background: #718096 !important; margin-top:10px;" onclick="location.reload()">Back to Quiz Start</button>
     </div>
 </div>
 
 <script>
-    // Live independent dynamic cloud database URL
-    const DB_URL = "https://kvdb.io";
-
     const quizData = [
         {
             qHi: "1. GCA का पूरा नाम क्या हैं ?", qEn: "What is full form of GCA ?",
@@ -220,117 +218,116 @@
             const optEn = currentQuestion.optsEn[index];
             const button = document.createElement('button');
             button.classList.add('btn');
-            button.innerHTML = `
-                <span style="display:block; font-weight:600; color:#2d3748;">${optHi}</span>
-                <span style="display:block; font-size:14px; color:#718096; font-style:italic;">\${optEn}</span>
-            `;
-            button.onclick = () => handleAnswer(index);
-            optionsContainer.appendChild(button);
-        });
-    }
-
-    function handleAnswer(selectedIndex) {
-        if (selectedIndex !== quizData[currentQuestionIndex].correct) perfectScore = false;
-        currentQuestionIndex++;
-        if (currentQuestionIndex < quizData.length) { showQuestion(); } else { endQuiz(); }
-    }
-
-    function handleRenderTable(records, containerId) {
-        records.sort((a, b) => {
-            if (a.perfect !== b.perfect) return a.perfect ? -1 : 1;
-            return a.timeMs - b.timeMs;
-        });
-
-        let html = `
-            <table class="master-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Participant Name</th>
-                        <th>Token ID</th>
-                        <th>Speed Time</th>
-                        <th>Result</th>
-                    </tr>
-                </thead>
-                <tbody>
+                   button.innerHTML = `
+            <span style="display:block; font-weight:600; color:#2d3748;">${optHi}</span>
+            <span style="display:block; font-size:14px; color:#718096; font-style:italic;">${optEn}</span>
         `;
+        button.onclick = () => handleAnswer(index);
+        optionsContainer.appendChild(button);
+    });
+}
 
-        if(records.length === 0) {
-            html += `<tr><td colspan="5" style="text-align:center; color:#a0aec0;">No submissions yet.</td></tr>`;
-        } else {
-            records.forEach((player, index) => {
-                const isWinner = (index === 0 && player.perfect);
-                const rowStyle = isWinner ? 'winner-row' : '';
-                const rankDisplay = isWinner ? '🏆 1st Place' : `${index + 1}`;
-                const statusDisplay = player.perfect ? '✅ Perfect 5/5' : '❌ Disqualified';
-                
-                html += `
-                    <tr class="${rowStyle}">
-                        <td>${rankDisplay}</td>
-                        <td>${player.name}</td>
-                        <td>${player.empId}</td>
-                        <td>${player.timeStr}</td>
-                        <td>${statusDisplay}</td>
-                    </tr>
-                `;
-            });
-        }
-        html += `</tbody></table>`;
-        document.getElementById(containerId).innerHTML = html;
-    }
+function handleAnswer(selectedIndex) {
+    if (selectedIndex !== quizData[currentQuestionIndex].correct) perfectScore = false;
+    currentQuestionIndex++;
+    if (currentQuestionIndex < quizData.length) { showQuestion(); } else { endQuiz(); }
+}
 
-    async function endQuiz() {
-        clearInterval(timerInterval);
-        const finalTimeStr = document.getElementById('timer').innerText;
-        document.getElementById('quiz-screen').classList.add('hidden');
-        document.getElementById('end-screen').classList.remove('hidden');
-        
-        const resultMessage = document.getElementById('result-message');
-        if (perfectScore) {
-            resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#38a169;">🏆 PERFECT SCORE! 🏆</div><p>Time: <b>${finalTimeStr}</b></p>`;
-        } else {
-            resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Disqualified ❌</div><p>Incorrect answers recorded.</p>`;
-        }
+function handleRenderTable(records, containerId) {
+    records.sort((a, b) => {
+        if (a.perfect !== b.perfect) return a.perfect ? -1 : 1;
+        return a.timeMs - b.timeMs;
+    });
 
-        try {
-            let res = await fetch(DB_URL);
-            let currentList = [];
-            if(res.ok) { currentList = await res.json(); }
-            if(!Array.isArray(currentList)) { currentList = []; }
+    let html = `
+        <table class="master-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Participant Name</th>
+                    <th>Token ID</th>
+                    <th>Speed Time</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    if(records.length === 0) {
+        html += `<tr><td colspan="5" style="text-align:center; color:#a0aec0;">No submissions yet.</td></tr>`;
+    } else {
+        records.forEach((player, index) => {
+            const isWinner = (index === 0 && player.perfect);
+            const rowStyle = isWinner ? 'winner-row' : '';
+            const rankDisplay = isWinner ? '🏆 1st Place' : `${index + 1}`;
+            const statusDisplay = player.perfect ? '✅ Perfect 5/5' : '❌ Disqualified';
             
-            currentList.push({
-                name: userName,
-                empId: userEmpId,
-                timeMs: finalTimeElapsedMs,
-                timeStr: finalTimeStr,
-                perfect: perfectScore
-            });
+            html += `
+                <tr class="${rowStyle}">
+                    <td>${rankDisplay}</td>
+                    <td>${player.name}</td>
+                    <td>${player.empId}</td>
+                    <td>${player.timeStr}</td>
+                    <td>${statusDisplay}</td>
+                </tr>
+            `;
+        });
+    }
+    html += `</tbody></table>`;
+    let element = document.getElementById(containerId);
+    if(element) element.innerHTML = html;
+}
 
-            await fetch(DB_URL, {
-                method: 'POST',
-                body: JSON.stringify(currentList)
-            });
-
-            handleRenderTable(currentList, 'end-leaderboard-container');
-        } catch(e) {
-            document.getElementById('end-leaderboard-container').innerText = "Network delay displaying rankings.";
-        }
+function endQuiz() {
+    clearInterval(timerInterval);
+    const finalTimeStr = document.getElementById('timer').innerText;
+    document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.remove('hidden');
+    
+    const resultMessage = document.getElementById('result-message');
+    if (perfectScore) {
+        resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#38a169;">🏆 PERFECT SCORE! 🏆</div><p>Time: <b>${finalTimeStr}</b></p>`;
+    } else {
+        resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Disqualified ❌</div><p>Incorrect answers recorded.</p>`;
     }
 
-    async function showMasterDashboard() {
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('master-dashboard-screen').classList.remove('hidden');
-        
-        try {
-            let res = await fetch(DB_URL);
-            let records = [];
-            if(res.ok) { records = await res.json(); }
-            if(!Array.isArray(records)) { records = []; }
-            handleRenderTable(records, 'master-table-container');
-        } catch(err) {
-            document.getElementById('master-table-container').innerText = "Failed loading global list.";
-        }
+    let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+    if(!Array.isArray(currentList)) { currentList = []; }
+    
+    currentList.push({
+        name: userName,
+        empId: userEmpId,
+        timeMs: finalTimeElapsedMs,
+        timeStr: finalTimeStr,
+        perfect: perfectScore
+    });
+
+    localStorage.setItem('msil_october_quiz_scores', JSON.stringify(currentList));
+    handleRenderTable(currentList, 'end-leaderboard-container');
+}
+
+function showMasterDashboard() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('master-dashboard-screen').classList.remove('hidden');
+    
+    let records = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+    if(!Array.isArray(records)) { records = []; }
+    handleRenderTable(records, 'master-table-container');
+}
+
+function clearLeaderboard() {
+    if(confirm("Are you sure you want to delete all scores? / क्या आप सारा डेटा डिलीट करना चाहते हैं?")) {
+        localStorage.removeItem('msil_october_quiz_scores');
+        showMasterDashboard();
     }
+}
+
+window.onload = function() {
+    let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+    if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
+        handleRenderTable(currentList, 'end-leaderboard-container');
+    }
+}
 </script>
 </body>
 </html>
