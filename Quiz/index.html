@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ MSIL Speed Quiz & Live Local Dashboard ⚡</title>
+    <title>⚡ MSIL Speed Quiz Challenge ⚡</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -23,7 +23,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 650px;
+            max-width: 700px;
             text-align: center;
         }
         h2 { color: #1e3c72; margin-top: 0; }
@@ -84,8 +84,8 @@
         .hidden { display: none; }
         .master-panel { margin-top: 25px; text-align: left; background: #f7fafc; border: 2px solid #cbd5e0; border-radius: 10px; padding: 20px; }
         .master-title { font-weight: bold; font-size: 20px; color: #2b6cb0; margin-bottom: 15px; border-bottom: 3px solid #cbd5e0; padding-bottom: 5px; text-align: center; }
-        .master-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .master-table th, .master-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .master-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .master-table th, .master-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         .master-table th { background-color: #4a5568; color: white; }
         .master-table tr:nth-child(even) { background-color: #edf2f7; }
         .winner-row { background-color: #fef3c7 !important; font-weight: bold; color: #b7791f; }
@@ -117,17 +117,15 @@
         <div id="options-container"></div>
     </div>
 
-    <!-- End Screen -->
+    <!-- End Screen (Try Again Removed) -->
     <div id="end-screen" class="hidden">
         <div id="result-message"></div>
         
-        <!-- Local Leaderboard Container inside End Screen -->
         <div class="master-panel">
             <div class="master-title">📊 Live Leaderboard (Winner on Top)</div>
             <div id="end-leaderboard-container">Loading scores...</div>
         </div>
-
-        <button class="btn-start" style="background: #4299e1 !important; margin-top:20px;" onclick="location.reload()">Try Again / दोबारा प्रयास करें</button>
+        <p style="color: #718096; font-size: 13px; font-style: italic; margin-top: 15px;">Note: You have successfully submitted. Re-running the quiz is blocked for this device.</p>
     </div>
 
     <!-- Master Monitor Panel -->
@@ -178,6 +176,18 @@
 
     let currentQuestionIndex = 0, startTime, timerInterval, perfectScore = true;
     let userName = "", userEmpId = "", finalTimeElapsedMs = 0;
+    let selectedAnswersLog = [];
+
+    // Blocks re-running if this specific device already has a registered record in memory
+    window.onload = function() {
+        if(localStorage.getItem('msil_quiz_submitted') === 'true') {
+            document.getElementById('start-screen').innerHTML = `
+                <h2 style="color:#e53e3e;">⚠️ Test Submission Locked / ब्लॉक</h2>
+                <p style="font-weight:500;">You have already submitted your response for this session.<br>क्विज़ पहले ही पूरा हो चुका है। दोबारा प्रयास करने की अनुमति नहीं है।</p>
+                <button class="btn-start" style="background:#718096 !important;" onclick="showMasterDashboard()">View Standings / परिणाम देखें</button>
+            `;
+        }
+    }
 
     function validateAndStart() {
         userName = document.getElementById('player-name').value.trim();
@@ -186,6 +196,15 @@
             alert("Please enter Name and Employee ID!");
             return;
         }
+
+        // Cross-checks Token ID against database history array
+        let history = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+        let identityExists = history.some(item => item.empId.toLowerCase() === userEmpId.toLowerCase());
+        if(identityExists) {
+            alert("This Employee Token ID has already taken the quiz! Access Denied.");
+            return;
+        }
+
         startQuiz();
     }
 
@@ -197,28 +216,28 @@
         showQuestion();
     }
 
-    function updateTimer() {
-        const timeElapsed = performance.now() - startTime;
-        finalTimeElapsedMs = timeElapsed;
-        const minutes = Math.floor(timeElapsed / 60000);
-        const seconds = Math.floor((timeElapsed % 60000) / 1000);
-        const milliseconds = Math.floor(timeElapsed % 1000);
-        document.getElementById('timer').innerText = 
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-    }
+        function updateTimer() {
+    const timeElapsed = performance.now() - startTime;
+    finalTimeElapsedMs = timeElapsed;
+    const minutes = Math.floor(timeElapsed / 60000);
+    const seconds = Math.floor((timeElapsed % 60000) / 1000);
+    const milliseconds = Math.floor(timeElapsed % 1000);
+    document.getElementById('timer').innerText = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+}
 
-    function showQuestion() {
-        const currentQuestion = quizData[currentQuestionIndex];
-        document.getElementById('q-hi').innerText = currentQuestion.qHi;
-        document.getElementById('q-en').innerText = currentQuestion.qEn;
-        const optionsContainer = document.getElementById('options-container');
-        optionsContainer.innerHTML = '';
-        
-        currentQuestion.optsHi.forEach((optHi, index) => {
-            const optEn = currentQuestion.optsEn[index];
-            const button = document.createElement('button');
-            button.classList.add('btn');
-                   button.innerHTML = `
+function showQuestion() {
+    const currentQuestion = quizData[currentQuestionIndex];
+    document.getElementById('q-hi').innerText = currentQuestion.qHi;
+    document.getElementById('q-en').innerText = currentQuestion.qEn;
+    const optionsContainer = document.getElementById('options-container');
+    optionsContainer.innerHTML = '';
+    
+    currentQuestion.optsHi.forEach((optHi, index) => {
+        const optEn = currentQuestion.optsEn[index];
+        const button = document.createElement('button');
+        button.classList.add('btn');
+        button.innerHTML = `
             <span style="display:block; font-weight:600; color:#2d3748;">${optHi}</span>
             <span style="display:block; font-size:14px; color:#718096; font-style:italic;">${optEn}</span>
         `;
@@ -228,9 +247,21 @@
 }
 
 function handleAnswer(selectedIndex) {
-    if (selectedIndex !== quizData[currentQuestionIndex].correct) perfectScore = false;
+    const currentQuestion = quizData[currentQuestionIndex];
+    selectedAnswersLog.push({
+        qNum: currentQuestionIndex + 1,
+        selectedOption: currentQuestion.optsEn[selectedIndex],
+        isCorrect: (selectedIndex === currentQuestion.correct)
+    });
+
+    if (selectedIndex !== currentQuestion.correct) perfectScore = false;
     currentQuestionIndex++;
-    if (currentQuestionIndex < quizData.length) { showQuestion(); } else { endQuiz(); }
+    
+    if (currentQuestionIndex < quizData.length) { 
+        showQuestion(); 
+    } else { 
+        endQuiz(); 
+    }
 }
 
 function handleRenderTable(records, containerId) {
@@ -248,13 +279,14 @@ function handleRenderTable(records, containerId) {
                     <th>Token ID</th>
                     <th>Speed Time</th>
                     <th>Result</th>
+                    <th>Answers Breakdown (Q1-Q5)</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
     if(records.length === 0) {
-        html += `<tr><td colspan="5" style="text-align:center; color:#a0aec0;">No submissions yet.</td></tr>`;
+        html += `<tr><td colspan="6" style="text-align:center; color:#a0aec0;">No submissions yet.</td></tr>`;
     } else {
         records.forEach((player, index) => {
             const isWinner = (index === 0 && player.perfect);
@@ -262,6 +294,8 @@ function handleRenderTable(records, containerId) {
             const rankDisplay = isWinner ? '🏆 1st Place' : `${index + 1}`;
             const statusDisplay = player.perfect ? '✅ Perfect 5/5' : '❌ Disqualified';
             
+            let breakdownStr = player.breakdown.map(ans => `Q${ans.qNum}: ${ans.isCorrect ? '✅' : '❌'} (${ans.selectedOption})`).join(' | ');
+
             html += `
                 <tr class="${rowStyle}">
                     <td>${rankDisplay}</td>
@@ -269,6 +303,7 @@ function handleRenderTable(records, containerId) {
                     <td>${player.empId}</td>
                     <td>${player.timeStr}</td>
                     <td>${statusDisplay}</td>
+                    <td style="font-size:11px; max-width:220px; white-space: normal; word-break: break-word;">${breakdownStr}</td>
                 </tr>
             `;
         });
@@ -288,7 +323,7 @@ function endQuiz() {
     if (perfectScore) {
         resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#38a169;">🏆 PERFECT SCORE! 🏆</div><p>Time: <b>${finalTimeStr}</b></p>`;
     } else {
-        resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Disqualified ❌</div><p>Incorrect answers recorded.</p>`;
+        resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Quiz Completed ❌</div><p>Incorrect answers recorded.</p>`;
     }
 
     let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
@@ -299,10 +334,13 @@ function endQuiz() {
         empId: userEmpId,
         timeMs: finalTimeElapsedMs,
         timeStr: finalTimeStr,
-        perfect: perfectScore
+        perfect: perfectScore,
+        breakdown: selectedAnswersLog
     });
 
     localStorage.setItem('msil_october_quiz_scores', JSON.stringify(currentList));
+    localStorage.setItem('msil_quiz_submitted', 'true');
+    
     handleRenderTable(currentList, 'end-leaderboard-container');
 }
 
@@ -316,18 +354,14 @@ function showMasterDashboard() {
 }
 
 function clearLeaderboard() {
-    if(confirm("Are you sure you want to delete all scores? / क्या आप सारा डेटा डिलीट करना चाहते हैं?")) {
+    if(confirm("Are you sure you want to delete all scores and unlock devices?")) {
         localStorage.removeItem('msil_october_quiz_scores');
-        showMasterDashboard();
-    }
-}
-
-window.onload = function() {
-    let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
-    if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
-        handleRenderTable(currentList, 'end-leaderboard-container');
+        localStorage.removeItem('msil_quiz_submitted');
+        alert("Database cleared successfully!");
+        location.reload();
     }
 }
 </script>
 </body>
 </html>
+
