@@ -372,8 +372,7 @@
         // Send data to Firebase Cloud Server
         window.saveScoreToCloud(userName, userEmpId, finalTimeElapsedMs, finalTimeStr, perfectScore);
            } // This closes the endQuiz function properly at line 374
-
-function clearLeaderboard() {
+           function clearLeaderboard() {
     let adminNameInput = prompt("Enter Admin Name / एडमिन का नाम दर्ज करें:");
     if (adminNameInput === null) return; 
 
@@ -391,3 +390,14 @@ function clearLeaderboard() {
         alert("🛑 Access Denied! Incorrect Admin Credentials.\nडेटा डिलीट करने की अनुमति नहीं है। केवल अधिकृत एडमिन ही इसे हटा सकता है।");
     }
 }
+
+// Auto-check table status if page ends on ranking view
+window.onload = function() {
+    let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+    if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
+        handleRenderTable(currentList, 'end-leaderboard-container');
+    }
+}
+</script>
+</body>
+</html>
