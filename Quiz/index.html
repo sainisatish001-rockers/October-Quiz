@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ MSIL Speed Quiz & Leaderboard ⚡</title>
+    <title>⚡ MSIL Speed Quiz Challenge ⚡</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -23,7 +23,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             text-align: center;
         }
         h2 { color: #1e3c72; margin-top: 0; }
@@ -65,141 +65,32 @@
             transition: all 0.2s ease;
             text-align: left;
         }
-        .btn:hover {
-            background-color: #edf2f7;
-            border-color: #cbd5e0;
-            transform: translateY(-2px);
-        }
+        .btn:hover { background-color: #edf2f7; border-color: #cbd5e0; transform: translateY(-2px); }
         .btn-start {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            margin: 12px 0;
             background: #48bb78 !important;
             color: white !important;
             text-align: center;
             font-size: 18px;
             font-weight: bold;
             border: none;
+            border-radius: 10px;
+            cursor: pointer;
         }
         .btn-start:hover { background: #38a169 !important; }
         .hidden { display: none; }
-        
-        /* Leaderboard Styling */
-        .leaderboard-box {
-            margin-top: 25px;
-            text-align: left;
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        .leaderboard-title {
-            font-weight: bold;
-            font-size: 18px;
-            color: #2b6cb0;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #edf2f7;
-            padding-bottom: 5px;
-            text-align: center;
-        }
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .leaderboard-table th, .leaderboard-table td {
-            padding: 10px;
-            text-align: left;
-        }
-        .leaderboard-table th { background-color: #e2e8f0; color: #4a5568; }
-        .leaderboard-table tr:nth-child(even) { background-color: #edf2f7; }
-        .rank-1 { background-color: #fef3c7 !important; font-weight: bold; } /* Winner Highlight */
+        .master-panel { margin-top: 25px; text-align: left; background: #f7fafc; border: 2px solid #cbd5e0; border-radius: 10px; padding: 20px; }
+        .master-title { font-weight: bold; font-size: 20px; color: #2b6cb0; margin-bottom: 15px; border-bottom: 3px solid #cbd5e0; padding-bottom: 5px; text-align: center; }
+        .master-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .master-table th, .master-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .master-table th { background-color: #4a5568; color: white; }
+        .master-table tr:nth-child(even) { background-color: #edf2f7; }
+        .winner-row { background-color: #fef3c7 !important; font-weight: bold; color: #b7791f; }
+        .admin-link { display: inline-block; margin-top: 30px; color: #718096; font-size: 12px; text-decoration: underline; cursor: pointer; }
     </style>
-
-    <!-- Firebase SDK Modules -->
-    <script type="module">
-        import { initializeApp } from "https://gstatic.com";
-        import { getDatabase, ref, push, set, onValue } from "https://gstatic.com";
-
-        // ⚠️ PASTE YOUR UNIQUE FIREBASE CONFIG OBJECT HERE
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_://firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_://firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_://appspot.com",
-            messagingSenderId: "YOUR_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-
-        // Expose functions globally so regular HTML button actions work seamlessly
-        window.saveScoreToCloud = function(name, empId, timeInMs, formattedTime, isPerfect) {
-            const scoresRef = ref(database, 'quiz_scores');
-            const newScoreRef = push(scoresRef);
-            set(newScoreRef, {
-                name: name,
-                empId: empId,
-                timeMs: timeInMs,
-                timeStr: formattedTime,
-                perfect: isPerfect,
-                timestamp: Date.now()
-            }).then(() => {
-                loadLeaderboard();
-            });
-        }
-
-        window.loadLeaderboard = function() {
-            const scoresRef = ref(database, 'quiz_scores');
-            onValue(scoresRef, (snapshot) => {
-                const data = snapshot.val();
-                let records = [];
-                for (let id in data) {
-                    records.push(data[id]);
-                }
-
-                // Sort Strategy: 
-                // 1. Perfect scores always outrank imperfect scores
-                // 2. If both are perfect, lowest time (fastest) wins
-                records.sort((a, b) => {
-                    if (a.perfect !== b.perfect) {
-                        return a.perfect ? -1 : 1; 
-                    }
-                    return a.timeMs - b.timeMs;
-                });
-
-                let html = `
-                    <table class="leaderboard-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Name (ID)</th>
-                                <th>Time</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                records.forEach((player, index) => {
-                    const rowClass = (index === 0 && player.perfect) ? 'rank-1' : '';
-                    const statusText = player.perfect ? "✅ 5/5" : "❌ Disqualified";
-                    const rankText = (index === 0 && player.perfect) ? "🏆 1st" : `${index + 1}`;
-                    
-                    html += `
-                        <tr class="${rowClass}">
-                            <td>${rankText}</td>
-                            <td>${player.name} (${player.empId})</td>
-                            <td>${player.timeStr}</td>
-                            <td>${statusText}</td>
-                        </tr>
-                    `;
-                });
-
-                html += `</tbody></table>`;
-                document.getElementById('leaderboard-container').innerHTML = html;
-            });
-        }
-    </script>
 </head>
 <body>
 
@@ -212,7 +103,8 @@
         <input type="text" id="player-name" class="input-field" placeholder="आपका नाम / Full Name" required>
         <input type="text" id="player-id" class="input-field" placeholder="टोकन नंबर / Employee ID" required>
         
-        <button class="btn btn-start" onclick="validateAndStart()">START CLOCK & QUIZ</button>
+        <button class="btn-start" onclick="validateAndStart()">START CLOCK & QUIZ</button>
+        <div class="admin-link" onclick="showMasterDashboard()">📊 Open Master Dashboard Window (Admin Only)</div>
     </div>
 
     <!-- Quiz Screen -->
@@ -225,17 +117,25 @@
         <div id="options-container"></div>
     </div>
 
-    <!-- End Screen -->
+    <!-- End Screen (Try Again is completely removed here) -->
     <div id="end-screen" class="hidden">
         <div id="result-message"></div>
         
-        <!-- Live Global Ranks -->
-        <div class="leaderboard-box">
-            <div class="leaderboard-title">📊 Live Leaderboard (Winner on Top)</div>
-            <div id="leaderboard-container">Loading scores...</div>
+        <div class="master-panel">
+            <div class="master-title">📊 Live Leaderboard (Winner on Top)</div>
+            <div id="end-leaderboard-container">Loading scores...</div>
         </div>
-        
-        <button class="btn btn-start" style="background: #4299e1 !important; text-align: center; margin-top:20px;" onclick="location.reload()">Try Again / दोबारा प्रयास करें</button>
+        <p style="color: #718096; font-size: 13px; font-style: italic; margin-top: 15px;">Note: You have successfully submitted. Re-running the quiz is blocked for this device.</p>
+    </div>
+
+    <!-- Master Monitor Panel -->
+    <div id="master-dashboard-screen" class="hidden">
+        <div class="master-panel">
+            <div class="master-title">🏆 MSIL LIVE MASTER DASHBOARD 🏆</div>
+            <div id="master-table-container">Loading table...</div>
+        </div>
+        <button class="btn-start" style="background: #e53e3e !important; margin-top:10px;" onclick="clearLeaderboard()">🗑️ Clear All Scores / डेटा डिलीट करें</button>
+        <button class="btn-start" style="background: #718096 !important; margin-top:10px;" onclick="location.reload()">Back to Quiz Start</button>
     </div>
 </div>
 
@@ -259,7 +159,7 @@
             optsEn: ["Safety", "Environment", "Quality", "Cost"],
             correct: 2
         },
-                {
+        {
             qHi: "4. MSIL प्लांट के अंदर ड्राइविंग के लिए क्या ज़रूरी हें", qEn: "What is required to drive vehicle inside MSIL plant?",
             optsHi: ["लाइसेन्स", "' D' बॅड्ज", "पहचान पत्र", "कुछ भी नही"],
             optsEn: ["License", "'D' Badge", "ID Card", "Nothing"],
@@ -274,42 +174,68 @@
         }
     ];
 
-    let currentQuestionIndex = 0;
-    let startTime;
-    let timerInterval;
-    let perfectScore = true;
-    let userName = "";
-    let userEmpId = "";
-    let finalTimeElapsedMs = 0;
+    let currentQuestionIndex = 0, startTime, timerInterval, perfectScore = true;
+    let userName = "", userEmpId = "", finalTimeElapsedMs = 0;
+    let selectedAnswersLog = [];
+
+        // Blocks re-running for regular players but EXEMPTS admin Sateesha (255769)
+    window.onload = function() {
+        // Checks if the device was used, but skips verification if it's the admin
+        if(localStorage.getItem('msil_quiz_submitted') === 'true') {
+            // A temporary input check on load to see if the current device user is Sateesha
+            let checkAdminId = prompt("Device Locked. If you are the Admin, enter Token ID to unlock:\n(अन्यथा इसे खाली छोड़ दें / Leave blank if participant)");
+            
+            if (checkAdminId && checkAdminId.trim() === "255769") {
+                alert("Welcome back Sateesha! Admin bypass active. You can run the quiz again.");
+                localStorage.removeItem('msil_quiz_submitted'); // Temporarily unlocks for this session
+                location.reload();
+                return;
+            }
+
+            document.getElementById('start-screen').innerHTML = `
+                <h2 style="color:#e53e3e;">⚠️ Test Submission Locked / ब्लॉक</h2>
+                <p style="font-weight:500;">You have already submitted your response for this session.<br>क्विज़ पहले ही पूरा हो चुका है। दोबारा प्रयास करने की अनुमति नहीं है।</p>
+                <button class="btn-start" style="background:#718096 !important;" onclick="showMasterDashboard()">View Standings / परिणाम देखें</button>
+            `;
+        }
+        let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+        if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
+            handleRenderTable(currentList, 'end-leaderboard-container');
+        }
+    }
 
     function validateAndStart() {
         userName = document.getElementById('player-name').value.trim();
         userEmpId = document.getElementById('player-id').value.trim();
-
         if(!userName || !userEmpId){
-            alert("कृपया नाम और टोकन नंबर दोनों भरें! / Please enter both Name and Employee ID!");
+            alert("Please enter Name and Employee ID!");
             return;
         }
+
+        let history = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+        let identityExists = history.some(item => item.empId.toLowerCase() === userEmpId.toLowerCase());
+        if(identityExists) {
+            alert("This Employee Token ID has already taken the quiz! Access Denied.");
+            return;
+        }
+
         startQuiz();
     }
 
     function startQuiz() {
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        
         startTime = performance.now();
-        timerInterval = setInterval(updateTimer, 10);
+                timerInterval = setInterval(updateTimer, 10);
         showQuestion();
     }
 
     function updateTimer() {
         const timeElapsed = performance.now() - startTime;
         finalTimeElapsedMs = timeElapsed;
-        
         const minutes = Math.floor(timeElapsed / 60000);
         const seconds = Math.floor((timeElapsed % 60000) / 1000);
         const milliseconds = Math.floor(timeElapsed % 1000);
-        
         document.getElementById('timer').innerText = 
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
     }
@@ -318,7 +244,6 @@
         const currentQuestion = quizData[currentQuestionIndex];
         document.getElementById('q-hi').innerText = currentQuestion.qHi;
         document.getElementById('q-en').innerText = currentQuestion.qEn;
-        
         const optionsContainer = document.getElementById('options-container');
         optionsContainer.innerHTML = '';
         
@@ -336,68 +261,155 @@
     }
 
     function handleAnswer(selectedIndex) {
-        if (selectedIndex !== quizData[currentQuestionIndex].correct) {
-            perfectScore = false;
-        }
-        
+        const currentQuestion = quizData[currentQuestionIndex];
+        selectedAnswersLog.push({
+            qNum: currentQuestionIndex + 1,
+            selectedOption: currentQuestion.optsEn[selectedIndex],
+            isCorrect: (selectedIndex === currentQuestion.correct)
+        });
+
+        if (selectedIndex !== currentQuestion.correct) perfectScore = false;
         currentQuestionIndex++;
-        if (currentQuestionIndex < quizData.length) {
-            showQuestion();
-        } else {
-            endQuiz();
+        
+        if (currentQuestionIndex < quizData.length) { 
+            showQuestion(); 
+        } else { 
+            endQuiz(); 
         }
     }
 
-    function endQuiz() {
+    function handleRenderTable(records, containerId) {
+        records.sort((a, b) => {
+            if (a.perfect !== b.perfect) return a.perfect ? -1 : 1;
+            return a.timeMs - b.timeMs;
+        });
+
+        let html = `
+            <table class="master-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Participant Name</th>
+                        <th>Token ID</th>
+                        <th>Speed Time</th>
+                        <th>Result</th>
+                        <th>Answers Breakdown (Q1-Q5)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        if(records.length === 0) {
+            html += `<tr><td colspan="6" style="text-align:center; color:#a0aec0;">No submissions yet.</td></tr>`;
+        } else {
+            records.forEach((player, index) => {
+                const isWinner = (index === 0 && player.perfect);
+                const rowStyle = isWinner ? 'winner-row' : '';
+                const rankDisplay = isWinner ? '🏆 1st Place' : `${index + 1}`;
+                const statusDisplay = player.perfect ? '✅ Perfect 5/5' : '❌ Disqualified';
+                
+                let breakdownStr = player.breakdown.map(ans => `Q${ans.qNum}: ${ans.isCorrect ? '✅' : '❌'} (${ans.selectedOption})`).join(' | ');
+
+                html += `
+                    <tr class="${rowStyle}">
+                        <td>${rankDisplay}</td>
+                        <td>${player.name}</td>
+                        <td>${player.empId}</td>
+                        <td>${player.timeStr}</td>
+                        <td>${statusDisplay}</td>
+                        <td style="font-size:11px; max-width:220px; white-space: normal; word-break: break-word;">${breakdownStr}</td>
+                    </tr>
+                `;
+            });
+        }
+        html += `</tbody></table>`;
+        let element = document.getElementById(containerId);
+        if(element) element.innerHTML = html;
+    }
+
+        function endQuiz() {
         clearInterval(timerInterval);
         const finalTimeStr = document.getElementById('timer').innerText;
-        
         document.getElementById('quiz-screen').classList.add('hidden');
         document.getElementById('end-screen').classList.remove('hidden');
         
         const resultMessage = document.getElementById('result-message');
-        
         if (perfectScore) {
-            resultMessage.innerHTML = `
-                <div style="font-size:24px; font-weight:bold; color:#38a169;">🏆 PERFECT SCORE! / पूर्ण अंक! 🏆</div>
-                <p>Your Time: <span style="color:#e53e3e; font-weight:bold;">${finalTimeStr}</span></p>
-            `;
+            resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#38a169;">🏆 PERFECT SCORE! 🏆</div><p>Time: <b>${finalTimeStr}</b></p>`;
         } else {
-            resultMessage.innerHTML = `
-                <div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Disqualified / अयोग्य ❌</div>
-                <p style="color:#718096; font-size:14px;">One or more wrong answers. Better luck next time!</p>
-            `;
+            resultMessage.innerHTML = `<div style="font-size:24px; font-weight:bold; color:#e53e3e;">❌ Quiz Completed ❌</div><p>Incorrect answers recorded.</p>`;
         }
 
-        // Send data to Firebase Cloud Server
-        window.saveScoreToCloud(userName, userEmpId, finalTimeElapsedMs, finalTimeStr, perfectScore);
-           } // This closes the endQuiz function properly at line 374
-           function clearLeaderboard() {
-    let adminNameInput = prompt("Enter Admin Name / एडमिन का नाम दर्ज करें:");
-    if (adminNameInput === null) return; 
+        let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+        if(!Array.isArray(currentList)) { currentList = []; }
+        
+        currentList.push({
+            name: userName,
+            empId: userEmpId,
+            timeMs: finalTimeElapsedMs,
+            timeStr: finalTimeStr,
+            perfect: perfectScore,
+            breakdown: selectedAnswersLog
+        });
 
-    let adminIdInput = prompt("Enter Admin Employee ID / एडमिन टोकन नंबर दर्ज करें:");
-    if (adminIdInput === null) return; 
-
-    if (adminNameInput.trim() === "Sateesha" && adminIdInput.trim() === "255769") {
-        if(confirm("Are you sure you want to delete all scores and unlock devices?\nक्या आप सचमुच सारा डेटा डिलीट करना चाहते हैं?")) {
-            localStorage.removeItem('msil_october_quiz_scores');
-            localStorage.removeItem('msil_quiz_submitted');
-            alert("Database cleared successfully! / डेटा सफलतापूर्वक डिलीट कर दिया गया है।");
-            location.reload();
+        localStorage.setItem('msil_october_quiz_scores', JSON.stringify(currentList));
+        localStorage.setItem('msil_quiz_submitted', 'true');
+        
+        // Strict Authorization Filter: Hide the scoreboard block from normal participants
+        const boardPanel = document.querySelector('#end-screen .master-panel');
+        if (boardPanel) {
+            if (userEmpId.trim() === "255769") {
+                // Only renders and displays if Admin text matches up
+                boardPanel.style.display = "block";
+                handleRenderTable(currentList, 'end-leaderboard-container');
+            } else {
+                // Completely removes the visibility grid for everyone else
+                boardPanel.style.display = "none";
+            }
         }
-    } else {
-        alert("🛑 Access Denied! Incorrect Admin Credentials.\nडेटा डिलीट करने की अनुमति नहीं है। केवल अधिकृत एडमिन ही इसे हटा सकता है।");
     }
-}
 
-// Auto-check table status if page ends on ranking view
-window.onload = function() {
-    let currentList = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
-    if(Array.isArray(currentList) && document.getElementById('end-leaderboard-container')) {
-        handleRenderTable(currentList, 'end-leaderboard-container');
+        function showMasterDashboard() {
+        // Step 1: Prompt for Security Authorization
+        let adminNameInput = prompt("Enter Admin Name / एडमिन का नाम दर्ज करें:");
+        if (adminNameInput === null) return; // User cancelled
+
+        let adminIdInput = prompt("Enter Admin Employee ID / एडमिन टोकन नंबर दर्ज करें:");
+        if (adminIdInput === null) return; // User cancelled
+
+        // Step 2: Verification Rule Check
+        if (adminNameInput.trim() === "Sateesha" && adminIdInput.trim() === "255769") {
+            // Authorized - display the dashboard panel grid smoothly
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('master-dashboard-screen').classList.remove('hidden');
+            
+            let records = JSON.parse(localStorage.getItem('msil_october_quiz_scores')) || [];
+            if(!Array.isArray(records)) { records = []; }
+            handleRenderTable(records, 'master-table-container');
+        } else {
+            // Unauthorized fallback notification
+            alert("🛑 Access Denied! Incorrect Admin Credentials.\nडैशबोर्ड देखने की अनुमति नहीं है। केवल अधिकृत एडमिन ही इसे खोल सकता है।");
+        }
     }
-}
+
+    function clearLeaderboard() {
+        let adminNameInput = prompt("Enter Admin Name / एडमिन का नाम दर्ज करें:");
+        if (adminNameInput === null) return; 
+
+        let adminIdInput = prompt("Enter Admin Employee ID / एडमिन टोकन नंबर दर्ज करें:");
+        if (adminIdInput === null) return; 
+
+        if (adminNameInput.trim() === "Sateesha" && adminIdInput.trim() === "255769") {
+            if(confirm("Are you sure you want to delete all scores and unlock devices?\nक्या आप सचमुच सारा डेटा डिलीट करना चाहते हैं?")) {
+                localStorage.removeItem('msil_october_quiz_scores');
+                localStorage.removeItem('msil_quiz_submitted');
+                alert("Database cleared successfully! / डेटा सफलतापूर्वक डिलीट कर दिया गया है।");
+                location.reload();
+            }
+        } else {
+            alert("🛑 Access Denied! Incorrect Admin Credentials.\nडेटा डिलीट करने की अनुमति नहीं है। केवल अधिकृत एडमिन ही इसे हटा सकता है।");
+        }
+    }
 </script>
 </body>
 </html>
